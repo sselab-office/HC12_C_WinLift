@@ -1,0 +1,186 @@
+/******************************************************************************
+   Copyright (C) 2000 Motorola, Inc.
+   All Rights Reserved
+
+   You can use this example for any purpose on any computer system with the
+   following restrictions:
+
+   1. This template is provided "as is", without warranty.
+
+   2. You don't remove this copyright notice from this template or any direct
+      derivation thereof.
+
+******************************************************************************/
+OIL_VERSION = "2.2";
+#include "C:\Metrowerks_ADS\osek\ost12\bin\ost2112.oil"
+
+CPU cpu1 {
+	OS os {
+		CC = AUTO;
+		STATUS = STANDARD;
+		DEBUG_LEVEL = 2;
+		IsrStackSize = 64;
+		TargetMCU = S12DP256 {
+			HCBasePage = TRUE;
+			SysTimer = SWCOUNTER {
+				ISRPRIORITY = 0;
+				COUNTER = SYSTEMTIMER;
+                TimerHardware = RTI {
+                    Prescaler = OS {
+                        Value = 90;
+                    };
+                };
+                Period = AUTO;
+			};
+		};
+		STARTUPHOOK = TRUE;
+		SHUTDOWNHOOK = FALSE;
+		PRETASKHOOK = FALSE;
+		POSTTASKHOOK = FALSE;
+		ERRORHOOK = TRUE;
+		TimeScale = FALSE ;
+	};
+    TASK MotorDriveTask {
+        PRIORITY = 10;
+        SCHEDULE = FULL;
+        AUTOSTART = FALSE;
+        ACTIVATION = 1;
+        STACKSIZE = 100;
+        EVENT = UP_EVENT;
+        EVENT = STOP_EVENT;
+        EVENT = DOWN_EVENT;
+    };
+    TASK LockTask {
+        PRIORITY = 5;
+        SCHEDULE = FULL;
+        AUTOSTART = FALSE;
+        ACTIVATION = 1;
+		ACCESSOR = RECEIVED {
+            MESSAGE = Msg_Lock;
+            WITHOUTCOPY = FALSE;
+            ACCESSNAME = "door_lock";
+        };
+    };
+    TASK InitTask {
+        PRIORITY = 30;
+        SCHEDULE = NON;
+        AUTOSTART = TRUE;
+        ACTIVATION = 1;
+    };
+
+    TASK InputTask {
+        PRIORITY = 0;
+        SCHEDULE = FULL;
+        AUTOSTART = FALSE;
+        ACTIVATION = 1;
+		ACCESSOR = SENT {
+            MESSAGE = Msg_Input;
+            WITHOUTCOPY = FALSE;
+            ACCESSNAME = "port_i";
+        };
+		STACKSIZE = AUTO;
+    };
+    TASK ControlTask {
+        PRIORITY = 20;
+        SCHEDULE = FULL;
+        AUTOSTART = FALSE;
+        ACTIVATION = 1;
+        STACKSIZE = 100;
+        ACCESSOR = RECEIVED {
+            MESSAGE = Msg_Input;
+            WITHOUTCOPY = FALSE;
+            ACCESSNAME = "port_input";
+        };
+        EVENT = KEY_EVENT;
+        EVENT = STATE_EVENT;
+        EVENT = INT_EVENT;
+        EVENT = END_INT_EVENT;
+        ACCESSOR = SENT {
+            MESSAGE = Msg_Lock;
+            WITHOUTCOPY = FALSE;
+            ACCESSNAME = "lock_msg";
+        };
+    };
+
+    EVENT STATE_EVENT { MASK = AUTO; };
+    EVENT UP_EVENT   { MASK = AUTO; };
+
+    COUNTER SYSTEMTIMER {
+        MAXALLOWEDVALUE = 0xFFFF;
+        TICKSPERBASE = 10;
+        MINCYCLE = 0;
+    };
+
+    ALARM BACK_AL {
+        COUNTER = SYSTEMTIMER;
+        ACTION = SETEVENT {
+            TASK = MotorDriveTask;
+            EVENT = STOP_EVENT;
+        };
+    };
+    ALARM STATE_AL {
+        COUNTER = SYSTEMTIMER;
+        ACTION = SETEVENT {
+            TASK = ControlTask;
+            EVENT = STATE_EVENT;
+        };
+    };
+
+    MESSAGE Msg_Input {
+        TYPE = UNQUEUED;
+        CDATATYPE = "MSG_PState";
+        ACTION = SETEVENT {
+            TASK = ControlTask;
+            EVENT = KEY_EVENT;
+        };
+    };
+    MESSAGE Msg_Lock {
+        TYPE = UNQUEUED;
+        CDATATYPE = "char";
+        ACTION = ACTIVATETASK {
+            TASK = LockTask;
+        };
+    };
+
+    EVENT STOP_EVENT {
+        MASK = AUTO;
+    };
+
+    EVENT KEY_EVENT {
+        MASK = AUTO;
+    };
+
+    EVENT DOWN_EVENT {
+        MASK = AUTO;
+    };
+
+    ALARM POLLINPUTS_AL {
+        COUNTER = SYSTEMTIMER;
+        ACTION = ACTIVATETASK {
+            TASK = InputTask;
+        };
+    };
+
+    APPMODE appmode;
+
+    EVENT INT_EVENT {
+        MASK = AUTO;
+    };
+
+    ISR StallInt {
+        CATEGORY = 2;
+        PRIORITY = 0;
+    };
+
+    EVENT END_INT_EVENT {
+        MASK = AUTO;
+    };
+
+    ALARM INT_END_AL {
+        COUNTER = SYSTEMTIMER;
+        ACTION = SETEVENT {
+            TASK = ControlTask;
+            EVENT = END_INT_EVENT;
+        };
+    };
+};

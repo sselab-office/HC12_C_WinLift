@@ -1,0 +1,24 @@
+OPEN source 0 0 60 30
+Source < attributes MARKS off
+OPEN assembly 60 0 40 30
+Assembly < attributes ADR off,CODE off,ABSADR on,SYMB off,TOPPC 0x88D9
+OPEN procedure 0 30 60 25
+Procedure < attributes VALUES on,TYPES off
+OPEN register 60 30 40 30
+Register < attributes FORMAT AUTO,COMPLEMENT None
+OPEN memory 60 60 40 40
+Memory < attributes FORMAT hex,COMPLEMENT None,WORD 1,ASC on,ADR on,ADDRESS 0x0
+OPEN data 0 55 60 23
+Data:1 < attributes SCOPE global,COMPLEMENT None,FORMAT Symb,MODE automatic,UPDATERATE 10,NAMEWIDTH 16
+OPEN data 0 78 60 22
+Data:2 < attributes SCOPE local,COMPLEMENT None,FORMAT Symb,MODE automatic,UPDATERATE 10,NAMEWIDTH 16
+OPEN inspect 56 68 44 32
+Inspect < attributes COLUMNWIDTH Components Type 100,COLUMNWIDTH Components FileName 100,COLUMNWIDTH Components Name 100,COLUMNWIDTH Components FileDate 100,COLUMNWIDTH Components FileVersion 100,COLUMNWIDTH STACK "Stack Start Address" 100,COLUMNWIDTH STACK "Stack Size" 100,COLUMNWIDTH STACK Name 100,COLUMNWIDTH STACK "Stack End Address" 100
+Inspect < attributes COLUMNWIDTH TASK "Task Event Masks" 100,COLUMNWIDTH TASK "Waited Events" 88,COLUMNWIDTH TASK "Task State" 82,COLUMNWIDTH TASK "Task Priority" 76,COLUMNWIDTH TASK "Task Properties" 100,COLUMNWIDTH TASK Name 100,COLUMNWIDTH TASK "Events State" 83,COLUMNWIDTH TASK "Current Task Stack" 100,COLUMNWIDTH OS_TYPE Name 234
+Inspect < attributes MAXELEM ON 256, FORMAT HEX, AUTOUPDATE 0,SPLIT 45,AUTOUPDATE 0
+OPEN winlift 10 6 40 84
+Winlift < attributes MOTOR_PORT "PIM.PTB",MOTOR_DDR "PIM.DDRB",STALL_PORT "PIM.PTH",STALL_DDR "PIM.DDRH",INPUT_PORT "PIM.PORTTVal",INPUT_DDR "PIM.DDRT",LOCK_PORT "PIM.PTA",LOCK_DDR "PIM.DDRA",IRQ_VECTOR  6
+bckcolor 50331647
+font 'Courier New' 9 BLACK
+AUTOSIZE on
+ACTIVATE Source Assembly Procedure Register Memory Data:1 Data:2 Inspect Winlift 

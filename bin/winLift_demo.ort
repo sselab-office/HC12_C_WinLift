@@ -1,0 +1,242 @@
+/******************************************************************************
+*
+*       Copyright (C) 2000-2001 Motorola, Inc.
+*       All Rights Reserved
+*
+*       The code is the property of Motorola St.Petersburg Software Development
+*       and is Motorola Confidential Proprietary Information.
+*
+*       The copyright notice above does not evidence any
+*       actual or intended publication of such source code.
+*
+*       Revision : 1.14 $ : baa $ : 2001/01/22 08:23:21 $
+*
+* Note: The implementation was used: OSEKturbo_OS12_2_1_1_17
+*		OSEK System generator Target Specific DLL - Version: 2.1.17
+*
+******************************************************************************/
+
+IMPLEMENTATION Motorola_ORTI_OSEKturbo_OS12_2_1_1_17 {
+
+    OS {
+		ENUM 	UINT8 [ "NO_TASK" = 0, 
+				"MotorDriveTask" = 1,
+				"ControlTask" = 2,
+				"LockTask" = 3,
+				"InitTask" = 4,
+				"InputTask" = 5
+			] RUNNINGTASK, "Running Task Identification";
+		ENUM 	UINT8 [ "NO_SERVICE" = 0, "StartOS" = 0x01, "ShutdownOS" = 0x02, 
+				"GetActiveApplicationMode" = 0x03, 
+												/* task management services	*/
+				"ActivateTask" = 0x10, "TerminateTask" = 0x11, "ChainTask" = 0x12,
+				"Schedule" = 0x13, "GetTaskId" = 0x14, "GetTaskState" = 0x15, 
+												/* interrupt handling services	*/
+				"EnterISR" = 0x20, "LeaveISR" = 0x21,  
+				"EnableInterrupt" = 0x22, "DisableInterrupt" = 0x23, "GetInterruptDescriptor" = 0x24,
+				"ResumeOSInterrupts" = 0x25, "SuspendOSInterrupts" = 0x26,
+				"EnableAllInterrupts" = 0x27, "DisableAllInterrupts" = 0x28,
+											/* resource management services	*/
+				"GetResource" = 0x30, "ReleaseResource" = 0x31,
+											/* event control services	*/
+				"SetEvent" = 0x40, "ClearEvent" = 0x41, "GetEvent" = 0x42, "WaitEvent" = 0x43,
+											/* messages services	*/ 
+				"SendMessage" = 0x50, "ReceiveMessage" = 0x51, 
+											/* counters and alarms services	*/
+				"GetAlarmBase" = 0x60, "GetAlarm" = 0x61, "SetRelAlarm" = 0x62, 
+				"SetAbsAlarm" = 0x63, "CancelAlarm" = 0x64,
+										/* OSEK OS v1.0 specs	*/
+				"InitCounter" = 0x65, "CounterTrigger" = 0x66,
+				"GetCounterValue" = 0x67, "GetCounterInfo" = 0x68, 
+												/* hook routines	*/
+				"ErrorHook" = 0x70, "PreTaskHook" = 0x71, "PostTaskHook" = 0x72,
+				"StartupHook" = 0x73, "ShutdownHook" = 0x74, 
+												/* extra services	*/
+				"IdleLoopHook" = 0x75] CURRENTSERVICE, "OS Services Watch";
+	ENUM 	UINT8 [ "TASK_LEVEL" = 0
+					   , "SYSTEM_TIMER" = 1 
+					   , "StallInt" = 3
+		] RUNNINGISR, "Executed ISR Identification";
+    };
+    TASK {
+		ENUM 	UINT8 [ "0" = 1, "5" = 2, "10" = 3, "20" = 4, "30" = 5] PRIORITY, "Task Priority"; 
+	   	ENUM 	UINT8 [ "RUNNING" = 0, "WAITING" = 1, "READY" = 2, "SUSPENDED" = 3 ] STATE, "Task State"; 
+
+        UINT8	EVENTS, "Events State";
+        UINT8	WAITEVENTS, "Waited Events";
+		STRING MASKS, "Task Event Masks";
+
+		ENUM 	ADDRESS [ "MAIN_STACK" = "&_OsOrtiStackStart", 			"MotorDriveTask_STACK" = "OsMotorDriveTaskStack+1",
+			"ControlTask_STACK" = "OsControlTaskStack+1",
+ 			"NO_STACK" = 0 ] STACK, "Current Task Stack";
+        STRING 	PROPERTY, "Task Properties";
+
+    };
+    STACK {
+        ADDRESS	STARTADDRESS , "Stack Start Address";
+        ADDRESS	ENDADDRESS , "Stack End Address";
+        UINT16	SIZE , "Stack Size";
+	};
+	COUNTER	{
+		STRING	MAXALLOWEDVALUE, "MAXALLOWEDVALUE";	
+  		STRING TICKSPERBASE, "TICKSPERBASE";
+		STRING MINCYCLE,  "MINCYCLE";	
+		UINT16 VALUE, "Current Value";	
+		ENUM  UINT8	[ "NO_ALARM" = 0, "ALARM" = 1] STATE, "Activated Alarm";  
+	};
+
+	ALARM	{
+	   	ENUM UINT8 [ "ALARMSTOP" = 0, "ALARMRUN" = 1] STATE, "Alarm State";
+		STRING COUNTER, "Assigned Counter"; 
+		STRING TASK, "Notified Task";
+		STRING EVENT, "Event to set";	
+		UINT16 TIME, "Time to expire";
+		UINT16 CYCLE, "Cycle period";
+	};
+
+
+	MESSAGE	{
+		STRING TYPE, "Message Type";
+		STRING TASK, "Notified Task";
+		STRING EVENT, "Event to be set";
+
+	};
+};
+
+/* Application Description Part */
+
+    OS os {
+		RUNNINGTASK = "OsRunning";
+		CURRENTSERVICE = "OsOrtiRunningServiceId";
+		RUNNINGISR = "OsOrtiRunningISRId";
+    };
+
+    TASK  MotorDriveTask {
+		PRIORITY = "3"; 
+		STATE = "( OsRunning != 1 ) * ( ( ( OsTaskStatus[1] & 0x02 ) != 0 ) + ( ( OsTaskStatus[1] & 0x02 ) == 0 )* ( ( OsTaskStatus[1] & 0x04 ) != 0 ) * 2 + ( OsTaskStatus[1] == 0 ) * 3 )";
+		STACK = "OsMotorDriveTaskStack+1"; 
+		EVENTS = "OsTaskSetEvent[0]" ;
+		WAITEVENTS = "OsTaskWaitEvent[0]" ;
+		MASKS = "UP_EVENT = , STOP_EVENT = , DOWN_EVENT = ";
+        PROPERTY = "EXTENDED, FULLPREEMPT, Priority: 10 ";
+
+    };
+    TASK  ControlTask {
+		PRIORITY = "4"; 
+		STATE = "( OsRunning != 2 ) * ( ( ( OsTaskStatus[2] & 0x02 ) != 0 ) + ( ( OsTaskStatus[2] & 0x02 ) == 0 )* ( ( OsTaskStatus[2] & 0x04 ) != 0 ) * 2 + ( OsTaskStatus[2] == 0 ) * 3 )";
+		STACK = "OsControlTaskStack+1"; 
+		EVENTS = "OsTaskSetEvent[1]" ;
+		WAITEVENTS = "OsTaskWaitEvent[1]" ;
+		MASKS = "KEY_EVENT = , STATE_EVENT = , INT_EVENT = , END_INT_EVENT = ";
+        PROPERTY = "EXTENDED, FULLPREEMPT, Priority: 20 ";
+
+    };
+    TASK  LockTask {
+		PRIORITY = "2"; 
+		STATE = "( OsRunning != 3 ) * ( ( ( OsTaskStatus[3] & 0x04 ) != 0 ) * 2 + ( OsTaskStatus[3] == 0 ) * 3 )";
+		STACK = "&_OsOrtiStackStart"; 
+		EVENTS = "0" ;
+		WAITEVENTS = "0" ;
+		MASKS = "";
+        PROPERTY = "BASIC , FULLPREEMPT, Priority: 5 ";
+
+    };
+    TASK  InitTask {
+		PRIORITY = "5"; 
+		STATE = "( OsRunning != 4 ) * ( ( ( OsTaskStatus[4] & 0x04 ) != 0 ) * 2 + ( OsTaskStatus[4] == 0 ) * 3 )";
+		STACK = "&_OsOrtiStackStart"; 
+		EVENTS = "0" ;
+		WAITEVENTS = "0" ;
+		MASKS = "";
+        PROPERTY = "BASIC , NONPREEMPT, Priority: 30 , AUTOSTART";
+
+    };
+    TASK  InputTask {
+		PRIORITY = "1"; 
+		STATE = "( OsRunning != 5 ) * ( ( ( OsTaskStatus[5] & 0x04 ) != 0 ) * 2 + ( OsTaskStatus[5] == 0 ) * 3 )";
+		STACK = "&_OsOrtiStackStart"; 
+		EVENTS = "0" ;
+		WAITEVENTS = "0" ;
+		MASKS = "";
+        PROPERTY = "BASIC , FULLPREEMPT, Priority: 0 ";
+
+    };
+
+	STACK MAIN_STACK {
+ 		STARTADDRESS = "&_OsOrtiStackStart";
+ 		ENDADDRESS = "&_OsOrtiStart";
+ 		SIZE = "&_OsOrtiStart - &_OsOrtiStackStart";
+ 	};
+
+	STACK ISR_STACK {
+ 		STARTADDRESS = "OsIsrStack";
+ 		ENDADDRESS = "OsIsrStack + 64";
+ 		SIZE = "64";
+ 	};
+
+	STACK MotorDriveTask_STACK {
+ 		STARTADDRESS = "OsMotorDriveTaskStack+1";
+ 		ENDADDRESS = "OsMotorDriveTaskStack + 101";
+ 		SIZE = "100";
+ 	};
+
+	STACK ControlTask_STACK {
+ 		STARTADDRESS = "OsControlTaskStack+1";
+ 		ENDADDRESS = "OsControlTaskStack + 101";
+ 		SIZE = "100";
+ 	};
+
+
+
+	COUNTER SYSTEMTIMER	{
+		MAXALLOWEDVALUE = "0xFFFF";	
+  		TICKSPERBASE = "10";
+		MINCYCLE = "0";	
+		VALUE = "OsCtrValue[0]";	
+		STATE = "(OsCtrLink[0] != 0xFF)";	   
+	};
+
+	ALARM  BACK_AL	{
+	    STATE = "(OsAlmLink[0] != 0)"; 
+		COUNTER = "SYSTEMTIMER"; 
+		TASK = "MotorDriveTask";
+		EVENT = "STOP_EVENT () ";	
+		TIME = "OsAlmValue[0] - OsCtrValue[OsAlmCtr[0]] + ((OsAlmValue[0] - OsCtrValue[OsAlmCtr[0]]) < 0)*(0xFFFF+1)"; 
+		CYCLE = "OsAlmCycle[0]";
+	};
+	ALARM  STATE_AL	{
+	    STATE = "(OsAlmLink[1] != 1)"; 
+		COUNTER = "SYSTEMTIMER"; 
+		TASK = "ControlTask";
+		EVENT = "STATE_EVENT () ";	
+		TIME = "OsAlmValue[1] - OsCtrValue[OsAlmCtr[1]] + ((OsAlmValue[1] - OsCtrValue[OsAlmCtr[1]]) < 0)*(0xFFFF+1)"; 
+		CYCLE = "OsAlmCycle[1]";
+	};
+	ALARM  POLLINPUTS_AL	{
+	    STATE = "(OsAlmLink[2] != 2)"; 
+		COUNTER = "SYSTEMTIMER"; 
+		TASK = "InputTask";
+		EVENT = " ";	
+		TIME = "OsAlmValue[2] - OsCtrValue[OsAlmCtr[2]] + ((OsAlmValue[2] - OsCtrValue[OsAlmCtr[2]]) < 0)*(0xFFFF+1)"; 
+		CYCLE = "OsAlmCycle[2]";
+	};
+	ALARM  INT_END_AL	{
+	    STATE = "(OsAlmLink[3] != 3)"; 
+		COUNTER = "SYSTEMTIMER"; 
+		TASK = "ControlTask";
+		EVENT = "END_INT_EVENT () ";	
+		TIME = "OsAlmValue[3] - OsCtrValue[OsAlmCtr[3]] + ((OsAlmValue[3] - OsCtrValue[OsAlmCtr[3]]) < 0)*(0xFFFF+1)"; 
+		CYCLE = "OsAlmCycle[3]";
+	};
+
+ 
+	MESSAGE Msg_Input {
+		TYPE = "UNQUEUED";
+		TASK = "ControlTask ";
+		EVENT = "KEY_EVENT ";
+	};
+	MESSAGE Msg_Lock {
+		TYPE = "UNQUEUED";
+		TASK = "LockTask ";
+		EVENT = "";
+	};

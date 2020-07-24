@@ -1,0 +1,27 @@
+NAMES
+  /* all files to be linked are passed to the linker from the CodeWarrior IDE directly */
+END
+
+SEGMENTS
+    MY_RAM = READ_WRITE    0x0800 TO 0x0BFF;
+    MY_ROM = READ_ONLY     0x8000 TO 0x0FEFF;
+    VECTORS= READ_ONLY	   0xFF8C TO 0xFFFF;
+END
+
+PLACEMENT
+    DEFAULT_RAM                      INTO  MY_RAM;
+    .stackstart                      INTO  MY_RAM;
+    .stack                           INTO  MY_RAM;
+    .stackend                        INTO  MY_RAM;
+    DEFAULT_ROM, ROM_VAR, STRINGS    INTO  MY_ROM;
+    .vectors                         INTO  VECTORS;
+END
+
+STACKSIZE 0x100
+
+ENTRIES                     /* switch off smart linking to get unreferenced vector table */
+    _vectab
+    _OsOrtiStackStart
+    _OsOrtiStart
+    OsBuildNumber
+END
